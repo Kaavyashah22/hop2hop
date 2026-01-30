@@ -12,9 +12,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Product, IntentLevel } from "@/types/marketplace";
-import { IntentTag } from "./IntentTag";
+import { createEnquiry } from "@/services/firestore";
+import { useAuth } from "@/contexts/AuthContext";
 import { Send, CheckCircle2, Zap, Package, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "@/hooks/use-toast";
 
 interface EnquiryModalProps {
   product: Product | null;
@@ -24,37 +26,54 @@ interface EnquiryModalProps {
 }
 
 const intentOptions: { value: IntentLevel; label: string; description: string; Icon: any }[] = [
-  { value: 'urgent', label: 'Urgent', description: 'Need within 24-48 hours', Icon: Zap },
-  { value: 'bulk', label: 'Bulk Order', description: 'Large quantity purchase', Icon: Package },
-  { value: 'exploring', label: 'Just Exploring', description: 'Gathering information', Icon: Search },
+  { value: "urgent", label: "Urgent", description: "Need within 24-48 hours", Icon: Zap },
+  { value: "bulk", label: "Bulk Order", description: "Large quantity purchase", Icon: Package },
+  { value: "exploring", label: "Just Exploring", description: "Gathering information", Icon: Search },
 ];
 
 export function EnquiryModal({ product, isOpen, onClose, onSubmit }: EnquiryModalProps) {
+  const { user, userProfile } = useAuth();
   const [message, setMessage] = useState("");
   const [intentLevel, setIntentLevel] = useState<IntentLevel>("exploring");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  
+
   const handleSubmit = async () => {
-    if (!message.trim()) return;
-    
+    if (!message.trim() || !product || !user || !userProfile) return;
+
     setIsSubmitting(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 800));
-    onSubmit(message, intentLevel);
-    setIsSubmitting(false);
-    setIsSuccess(true);
-    
-    setTimeout(() => {
-      setIsSuccess(false);
-      setMessage("");
-      setIntentLevel("exploring");
-      onClose();
-    }, 1500);
+    try {
+      await createEnquiry({
+        productId: product.id,
+        productName: product.name,
+        buyerId: user.uid,
+        buyerName: userProfile.name,
+        sellerId: product.sellerId,
+        message,
+        intentLevel,
+      });
+
+      onSubmit(message, intentLevel);
+      setIsSuccess(true);
+
+      setTimeout(() => {
+        setIsSuccess(false);
+        setMessage("");
+        setIntentLevel("exploring");
+        onClose();
+      }, 1500);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to send enquiry. Please try again.",
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
+    }
   };
-  
+
   if (!product) return null;
-  
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px]">
@@ -73,10 +92,12 @@ export function EnquiryModal({ product, isOpen, onClose, onSubmit }: EnquiryModa
             <DialogHeader>
               <DialogTitle>Send Enquiry</DialogTitle>
               <DialogDescription>
-                Enquiring about <span className="font-medium text-foreground">{product.name}</span> from {product.sellerName}
+                Enquiring about{" "}
+                <span className="font-medium text-foreground">{product.name}</span> from{" "}
+                {product.sellerName}
               </DialogDescription>
             </DialogHeader>
-            
+
             <div className="space-y-6 py-4">
               <div className="space-y-2">
                 <Label htmlFor="message">Your Message</Label>
@@ -88,7 +109,7 @@ export function EnquiryModal({ product, isOpen, onClose, onSubmit }: EnquiryModa
                   className="min-h-[120px] resize-none"
                 />
               </div>
-              
+
               <div className="space-y-3">
                 <Label>Buyer Intent Level</Label>
                 <RadioGroup
@@ -109,18 +130,22 @@ export function EnquiryModal({ product, isOpen, onClose, onSubmit }: EnquiryModa
                         )}
                       >
                         <RadioGroupItem value={option.value} className="sr-only" />
-                        <div className={cn(
-                          "w-10 h-10 rounded-full flex items-center justify-center",
-                          option.value === 'urgent' && "bg-intent-urgent/10",
-                          option.value === 'bulk' && "bg-intent-bulk/10",
-                          option.value === 'exploring' && "bg-intent-exploring/10"
-                        )}>
-                          <Icon className={cn(
-                            "w-5 h-5",
-                            option.value === 'urgent' && "text-intent-urgent",
-                            option.value === 'bulk' && "text-intent-bulk",
-                            option.value === 'exploring' && "text-intent-exploring"
-                          )} />
+                        <div
+                          className={cn(
+                            "w-10 h-10 rounded-full flex items-center justify-center",
+                            option.value === "urgent" && "bg-intent-urgent/10",
+                            option.value === "bulk" && "bg-intent-bulk/10",
+                            option.value === "exploring" && "bg-intent-exploring/10"
+                          )}
+                        >
+                          <Icon
+                            className={cn(
+                              "w-5 h-5",
+                              option.value === "urgent" && "text-intent-urgent",
+                              option.value === "bulk" && "text-intent-bulk",
+                              option.value === "exploring" && "text-intent-exploring"
+                            )}
+                          />
                         </div>
                         <div className="flex-1">
                           <p className="font-medium">{option.label}</p>
@@ -132,15 +157,12 @@ export function EnquiryModal({ product, isOpen, onClose, onSubmit }: EnquiryModa
                 </RadioGroup>
               </div>
             </div>
-            
+
             <DialogFooter>
               <Button variant="outline" onClick={onClose}>
                 Cancel
               </Button>
-              <Button 
-                onClick={handleSubmit} 
-                disabled={!message.trim() || isSubmitting}
-              >
+              <Button onClick={handleSubmit} disabled={!message.trim() || isSubmitting}>
                 {isSubmitting ? (
                   <span className="animate-pulse">Sending...</span>
                 ) : (
