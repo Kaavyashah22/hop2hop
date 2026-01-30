@@ -28,7 +28,7 @@ const badgeConfig = {
 };
 
 export function PriceBadge({ type, price, priceMin, priceMax }: PriceBadgeProps) {
-  const config = badgeConfig[type];
+  const config = badgeConfig[type] ?? badgeConfig.negotiable;
   const Icon = config.Icon;
   
   const formatPrice = (value: number) => {
