@@ -4,11 +4,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { RequirementCard } from "@/components/RequirementCard";
 import { EnquiryCard } from "@/components/EnquiryCard";
 import { StatusIndicator } from "@/components/StatusIndicator";
+import { AddProductModal } from "@/components/AddProductModal";
 import { useEnquiriesForSeller, useRequirements, useSellerProducts } from "@/hooks/useFirestore";
 import { addInterestedSeller, updateSellerStatus } from "@/services/firestore";
 import { useAuth } from "@/contexts/AuthContext";
 import { SellerStatus, BuyerRequirement } from "@/types/marketplace";
-import { Package, MessageSquare, FileText, Settings, Loader2 } from "lucide-react";
+import { Package, MessageSquare, FileText, Settings, Loader2, Plus } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 const statusOptions: { value: SellerStatus; label: string }[] = [
@@ -25,6 +26,7 @@ export function SellerDashboard() {
 
   const [activeTab, setActiveTab] = useState<"enquiries" | "products" | "requirements">("enquiries");
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [showAddProduct, setShowAddProduct] = useState(false);
 
   const sellerStatus = userProfile?.sellerStatus || "available";
 
@@ -178,8 +180,8 @@ export function SellerDashboard() {
                     <h2 className="text-xl font-semibold mb-2">Your Products</h2>
                     <p className="text-sm text-muted-foreground">Manage your product listings</p>
                   </div>
-                  <Button>
-                    <Package className="w-4 h-4 mr-2" />
+                  <Button onClick={() => setShowAddProduct(true)}>
+                    <Plus className="w-4 h-4 mr-2" />
                     Add Product
                   </Button>
                 </div>
@@ -259,6 +261,12 @@ export function SellerDashboard() {
             )}
           </>
         )}
+
+        {/* Add Product Modal */}
+        <AddProductModal 
+          open={showAddProduct} 
+          onClose={() => setShowAddProduct(false)} 
+        />
       </div>
     </div>
   );
