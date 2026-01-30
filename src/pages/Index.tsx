@@ -11,8 +11,12 @@ const Index = () => {
   const [seeding, setSeeding] = useState(false);
 
   const handleSeedProducts = async () => {
+    if (!userProfile) {
+      toast.error('You must be logged in to seed products.');
+      return;
+    }
     setSeeding(true);
-    const result = await seedProducts();
+    const result = await seedProducts(userProfile.id, userProfile.name);
     if (result.success) {
       toast.success(result.message);
     } else {
