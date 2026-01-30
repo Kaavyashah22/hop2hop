@@ -1,0 +1,77 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user owns the document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Helper function to get user role from their profile
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    
+    // Helper function to check if user is a seller
+    function isSeller() {
+      return isAuthenticated() && getUserRole() == 'seller';
+    }
+    
+    // Helper function to check if user is a buyer
+    function isBuyer() {
+      return isAuthenticated() && getUserRole() == 'buyer';
+    }
+    
+    // ============= USERS COLLECTION =============
+    // Users can only read and write their own profile
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if false; // Prevent user deletion from client
+    }
+    
+    // ============= PRODUCTS COLLECTION =============
+    // All authenticated users can read products
+    // Only sellers can create/update/delete their own products
+    match /products/{productId} {
+      allow read: if isAuthenticated();
+      allow create: if isSeller() && request.resource.data.sellerId == request.auth.uid;
+      allow update: if isSeller() && resource.data.sellerId == request.auth.uid;
+      allow delete: if isSeller() && resource.data.sellerId == request.auth.uid;
+    }
+    
+    // ============= ENQUIRIES COLLECTION =============
+    // Buyers can create enquiries
+    // Both buyer and seller involved in the enquiry can read it
+    // Only seller can update status (respond)
+    match /enquiries/{enquiryId} {
+      allow read: if isAuthenticated() && 
+        (resource.data.buyerId == request.auth.uid || resource.data.sellerId == request.auth.uid);
+      allow create: if isBuyer() && request.resource.data.buyerId == request.auth.uid;
+      allow update: if isAuthenticated() && 
+        (resource.data.sellerId == request.auth.uid || resource.data.buyerId == request.auth.uid);
+      allow delete: if false; // Prevent enquiry deletion
+    }
+    
+    // ============= REQUIREMENTS COLLECTION =============
+    // All authenticated users can read requirements (marketplace listing)
+    // Only buyers can create their own requirements
+    // Sellers can update to add themselves to interestedSellers
+    // Only the requirement owner can delete
+    match /requirements/{requirementId} {
+      allow read: if isAuthenticated();
+      allow create: if isBuyer() && request.resource.data.buyerId == request.auth.uid;
+      allow update: if isAuthenticated() && 
+        (resource.data.buyerId == request.auth.uid || 
+         // Allow sellers to only add to interestedSellers array
+         (isSeller() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['interestedSellers'])));
+      allow delete: if isBuyer() && resource.data.buyerId == request.auth.uid;
+    }
+  }
+}
