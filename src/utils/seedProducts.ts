@@ -5,9 +5,6 @@ const sampleProducts = [
   {
     name: 'Industrial Steel Pipes',
     category: 'Raw Materials',
-    sellerId: 'demo-seller-1',
-    sellerName: 'Industrial Solutions Ltd',
-    sellerStatus: 'available',
     priceType: 'exact',
     price: 2500,
     description: 'High-quality galvanized steel pipes for industrial use. Available in various sizes.',
@@ -15,9 +12,6 @@ const sampleProducts = [
   {
     name: 'Electronic Control Panels',
     category: 'Electronics',
-    sellerId: 'demo-seller-2',
-    sellerName: 'Tech Components Co',
-    sellerStatus: 'delayed',
     priceType: 'range',
     priceMin: 15000,
     priceMax: 45000,
@@ -26,9 +20,6 @@ const sampleProducts = [
   {
     name: 'Bulk Packaging Materials',
     category: 'Packaging',
-    sellerId: 'demo-seller-1',
-    sellerName: 'Industrial Solutions Ltd',
-    sellerStatus: 'available',
     priceType: 'negotiable',
     price: 500,
     description: 'Eco-friendly packaging solutions for bulk orders.',
@@ -36,9 +27,6 @@ const sampleProducts = [
   {
     name: 'Industrial Machinery Parts',
     category: 'Machinery',
-    sellerId: 'demo-seller-3',
-    sellerName: 'Premium Supplies Inc',
-    sellerStatus: 'unavailable',
     priceType: 'range',
     priceMin: 8000,
     priceMax: 25000,
@@ -47,9 +35,6 @@ const sampleProducts = [
   {
     name: 'Safety Equipment Kit',
     category: 'Safety',
-    sellerId: 'demo-seller-2',
-    sellerName: 'Tech Components Co',
-    sellerStatus: 'delayed',
     priceType: 'exact',
     price: 3200,
     description: 'Complete safety equipment kit for industrial workers.',
@@ -57,34 +42,34 @@ const sampleProducts = [
   {
     name: 'Chemical Solvents',
     category: 'Chemicals',
-    sellerId: 'demo-seller-1',
-    sellerName: 'Industrial Solutions Ltd',
-    sellerStatus: 'available',
     priceType: 'negotiable',
     price: 1200,
     description: 'Industrial-grade chemical solvents for manufacturing.',
   },
 ];
 
-export async function seedProducts(): Promise<{ success: boolean; message: string }> {
+export async function seedProducts(userId: string, userName: string): Promise<{ success: boolean; message: string }> {
   try {
-    // Check if products already exist
+    // Check if products already exist for this user
     const existingProducts = await getDocs(collection(db, 'products'));
     if (!existingProducts.empty) {
       return { success: true, message: `Products already seeded (${existingProducts.size} products exist)` };
     }
 
-    // Add sample products
+    // Add sample products with authenticated user as owner
     for (const product of sampleProducts) {
       await addDoc(collection(db, 'products'), {
         ...product,
+        sellerId: userId,
+        sellerName: userName,
+        sellerStatus: 'available',
         createdAt: serverTimestamp(),
       });
     }
 
-    return { success: true, message: `Successfully added ${sampleProducts.length} sample products!` };
-  } catch (error: any) {
+    return { success: true, message: `Successfully added ${sampleProducts.length} sample products to your account!` };
+  } catch (error) {
     console.error('Error seeding products:', error);
-    return { success: false, message: `Error: ${error.message}` };
+    return { success: false, message: 'Failed to seed products. Please try again.' };
   }
 }
