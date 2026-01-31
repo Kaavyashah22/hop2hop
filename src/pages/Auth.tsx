@@ -72,18 +72,19 @@ export default function Auth() {
         const { error } = await signUp(email, password, name, role);
         if (error) {
           setError(error);
-        } else {
-          navigate("/");
+          setIsLoading(false);
         }
+        // Navigation handled by AuthRedirect after auth state updates
       } else {
         const { error } = await signIn(email, password);
         if (error) {
           setError(error);
-        } else {
-          navigate("/");
+          setIsLoading(false);
         }
+        // Navigation handled by AuthRedirect after auth state updates
       }
-    } finally {
+    } catch (err) {
+      setError("An unexpected error occurred. Please try again.");
       setIsLoading(false);
     }
   };

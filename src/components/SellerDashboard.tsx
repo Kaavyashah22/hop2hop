@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { RequirementCard } from "@/components/RequirementCard";
 import { EnquiryCard } from "@/components/EnquiryCard";
-import { StatusIndicator } from "@/components/StatusIndicator";
 import { AddProductModal } from "@/components/AddProductModal";
 import { useEnquiriesForSeller, useRequirements, useSellerProducts } from "@/hooks/useFirestore";
 import { addInterestedSeller, updateSellerStatus } from "@/services/firestore";
@@ -11,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { SellerStatus, BuyerRequirement } from "@/types/marketplace";
 import { Package, MessageSquare, FileText, Settings, Loader2, Plus } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 const statusOptions: { value: SellerStatus; label: string }[] = [
   { value: "available", label: "Available Today" },
@@ -102,7 +102,14 @@ export function SellerDashboard() {
                         disabled={updatingStatus}
                         className="text-xs"
                       >
-                        <StatusIndicator status={option.value} showLabel={false} size="sm" />
+                        <span
+                          className={cn(
+                            "w-2 h-2 rounded-full",
+                            option.value === "available" && "bg-green-500",
+                            option.value === "delayed" && "bg-yellow-500",
+                            option.value === "unavailable" && "bg-red-500"
+                          )}
+                        />
                         <span className="ml-2 hidden sm:inline">{option.label}</span>
                       </Button>
                     ))}
