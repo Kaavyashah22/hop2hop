@@ -252,7 +252,7 @@ export function SellerDashboard() {
                       isSeller
                       onInterested={handleShowInterest}
                       alreadyInterested={
-                        user ? requirement.interestedSellers.includes(user.uid) : false
+                        user ? (requirement.interestedSellers || []).includes(user.uid) : false
                       }
                     />
                   ))}

@@ -17,6 +17,12 @@ export function RequirementCard({
   onInterested,
   alreadyInterested = false 
 }: RequirementCardProps) {
+  const createdAtDate = requirement.createdAt instanceof Date 
+    ? requirement.createdAt 
+    : new Date(requirement.createdAt || Date.now());
+  
+  const interestedCount = requirement.interestedSellers?.length || 0;
+
   return (
     <Card className="card-hover animate-fade-in">
       <CardHeader className="pb-3">
@@ -26,7 +32,7 @@ export function RequirementCard({
               {requirement.productNeeded}
             </h3>
             <p className="text-sm text-muted-foreground">
-              by {requirement.buyerName} • {formatDistanceToNow(requirement.createdAt, { addSuffix: true })}
+              by {requirement.buyerName} • {formatDistanceToNow(createdAtDate, { addSuffix: true })}
             </p>
           </div>
         </div>
@@ -52,7 +58,7 @@ export function RequirementCard({
           </div>
           <div className="flex items-center gap-2 text-sm">
             <Users className="w-4 h-4 text-muted-foreground" />
-            <span>{requirement.interestedSellers.length} interested</span>
+            <span>{interestedCount} interested</span>
           </div>
         </div>
       </CardContent>
