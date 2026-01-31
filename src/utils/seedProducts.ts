@@ -1,4 +1,4 @@
-import { collection, addDoc, getDocs, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, getDocs, serverTimestamp, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 const sampleProducts = [
@@ -96,30 +96,73 @@ const sampleRequirements = [
   },
 ];
 
+// Sample enquiries - these will be linked to seller's products
+const sampleEnquiries = [
+  {
+    buyerName: 'Rajesh Kumar',
+    message: 'Need 500 units urgently for our construction project starting next week. Can you deliver?',
+    intentLevel: 'urgent',
+    status: 'pending',
+  },
+  {
+    buyerName: 'Priya Sharma',
+    message: 'Looking for monthly supply of 10,000 units. Can we discuss bulk pricing and long-term contract?',
+    intentLevel: 'bulk',
+    status: 'pending',
+  },
+  {
+    buyerName: 'Amit Patel',
+    message: 'Interested in learning more about your products. Can you share catalog and pricing details?',
+    intentLevel: 'exploring',
+    status: 'pending',
+  },
+  {
+    buyerName: 'Sunita Reddy',
+    message: 'We need 200 units by end of this week. This is very urgent - please confirm availability ASAP.',
+    intentLevel: 'urgent',
+    status: 'pending',
+  },
+  {
+    buyerName: 'Vikram Singh',
+    message: 'Our company is expanding and we need a reliable supplier for 5,000+ units per month. Interested in partnership.',
+    intentLevel: 'bulk',
+    status: 'pending',
+  },
+];
+
 export async function seedProducts(userId: string, userName: string): Promise<{ success: boolean; message: string }> {
   try {
-    // Check if products already exist for this user
     const existingProducts = await getDocs(collection(db, 'products'));
     const existingRequirements = await getDocs(collection(db, 'requirements'));
+    const existingEnquiries = await getDocs(query(collection(db, 'enquiries'), where('sellerId', '==', userId)));
     
     let productsAdded = 0;
     let requirementsAdded = 0;
+    let enquiriesAdded = 0;
+    const addedProductIds: { id: string; name: string }[] = [];
 
     // Seed products if none exist
     if (existingProducts.empty) {
       for (const product of sampleProducts) {
-        await addDoc(collection(db, 'products'), {
+        const docRef = await addDoc(collection(db, 'products'), {
           ...product,
           sellerId: userId,
           sellerName: userName,
           sellerStatus: 'available',
           createdAt: serverTimestamp(),
         });
+        addedProductIds.push({ id: docRef.id, name: product.name });
       }
       productsAdded = sampleProducts.length;
+    } else {
+      // Get existing products for this seller to link enquiries
+      const sellerProducts = await getDocs(query(collection(db, 'products'), where('sellerId', '==', userId)));
+      sellerProducts.docs.forEach(doc => {
+        addedProductIds.push({ id: doc.id, name: doc.data().name });
+      });
     }
 
-    // Seed requirements if none exist (use a demo buyer ID)
+    // Seed requirements if none exist
     if (existingRequirements.empty) {
       for (const requirement of sampleRequirements) {
         await addDoc(collection(db, 'requirements'), {
@@ -131,20 +174,39 @@ export async function seedProducts(userId: string, userName: string): Promise<{ 
       requirementsAdded = sampleRequirements.length;
     }
 
-    if (productsAdded === 0 && requirementsAdded === 0) {
+    // Seed enquiries if none exist for this seller and they have products
+    if (existingEnquiries.empty && addedProductIds.length > 0) {
+      for (let i = 0; i < sampleEnquiries.length; i++) {
+        const enquiry = sampleEnquiries[i];
+        const product = addedProductIds[i % addedProductIds.length]; // Cycle through products
+        
+        await addDoc(collection(db, 'enquiries'), {
+          ...enquiry,
+          productId: product.id,
+          productName: product.name,
+          buyerId: `demo-buyer-${Math.random().toString(36).substr(2, 9)}`,
+          sellerId: userId,
+          createdAt: serverTimestamp(),
+        });
+      }
+      enquiriesAdded = sampleEnquiries.length;
+    }
+
+    if (productsAdded === 0 && requirementsAdded === 0 && enquiriesAdded === 0) {
       return { 
         success: true, 
-        message: `Data already seeded (${existingProducts.size} products, ${existingRequirements.size} requirements exist)` 
+        message: `Data already seeded (${existingProducts.size} products, ${existingRequirements.size} requirements, ${existingEnquiries.size} enquiries exist)` 
       };
     }
 
     const messages = [];
     if (productsAdded > 0) messages.push(`${productsAdded} products`);
     if (requirementsAdded > 0) messages.push(`${requirementsAdded} buyer requirements`);
+    if (enquiriesAdded > 0) messages.push(`${enquiriesAdded} enquiries`);
 
     return { 
       success: true, 
-      message: `Successfully added ${messages.join(' and ')}!` 
+      message: `Successfully added ${messages.join(', ')}!` 
     };
   } catch (error) {
     console.error('Error seeding data:', error);
